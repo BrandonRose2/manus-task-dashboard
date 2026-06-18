@@ -43,6 +43,21 @@ export default function PinLock({ children }: PinLockProps) {
     if (session === "true") setUnlocked(true);
   }, []);
 
+  // Keyboard input support
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (unlocked) return;
+      if (locked || checking) return;
+      if (e.key >= "0" && e.key <= "9") {
+        setDigits((prev) => prev.length < 4 ? [...prev, e.key] : prev);
+      } else if (e.key === "Backspace") {
+        setDigits((prev) => prev.slice(0, -1));
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [unlocked, locked, checking]);
+
   // Countdown timer when locked out
   useEffect(() => {
     if (locked && lockTimer > 0) {
