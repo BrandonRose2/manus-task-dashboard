@@ -26,7 +26,7 @@ def api_get(path, params=None):
     if params:
         query = "&".join(f"{k}={v}" for k, v in params.items())
         url = f"{url}?{query}"
-    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {API_KEY}"})
+    req = urllib.request.Request(url, headers={"x-manus-api-key": API_KEY})
     for attempt in range(5):
         try:
             with urllib.request.urlopen(req, timeout=30) as resp:
@@ -50,9 +50,9 @@ def fetch_all_tasks():
             params["cursor"] = cursor
         print(f"  Fetching page {page}...")
         data = api_get("/task.list", params)
-        batch = data.get("data", {}).get("tasks", [])
+        batch = data.get("data", [])
         tasks.extend(batch)
-        next_cursor = data.get("data", {}).get("next_cursor")
+        next_cursor = data.get("next_cursor")
         if not next_cursor or not batch:
             break
         cursor = next_cursor
@@ -65,11 +65,12 @@ def normalize_task(t):
         "id": t.get("id", ""),
         "title": t.get("title", "Untitled Task"),
         "status": t.get("status", "unknown"),
-        "type": t.get("type", "standard"),
+        "type": t.get("task_type", "standard"),
         "agent_profile": t.get("agent_profile", "manus-1.6"),
-        "credits_used": t.get("credits_used", 0),
+        "credits_used": t.get("credit_usage", 0),
         "created_at": t.get("created_at", ""),
         "updated_at": t.get("updated_at", ""),
+        "task_url": t.get("task_url", ""),
         "message_count": t.get("message_count", 0),
     }
 
