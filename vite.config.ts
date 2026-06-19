@@ -7,9 +7,13 @@ import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
 // https://vitejs.dev/config/
 export default defineConfig({
   server: {
-    allowedHosts: "all",
+    allowedHosts: [
+      "localhost",
+      ".manus.computer",
+      ".manus.space",
+    ],
   },
-  base: "/manus-task-dashboard/",
+  base: "/",
   plugins: [react(), tailwindcss(), vitePluginManusRuntime()],
   resolve: {
     alias: {
