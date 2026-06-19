@@ -44,8 +44,22 @@ import {
   MessageSquare,
   Tag,
   User,
+  Download,
 } from "lucide-react";
 import { Link } from "wouter";
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function downloadTaskJson(task: Task) {
+  const blob = new Blob([JSON.stringify(task, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  const safeName = task.title.replace(/[^a-z0-9]/gi, "_").slice(0, 60);
+  a.download = `task_${String(task.num).padStart(4, "0")}_${safeName}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -235,21 +249,36 @@ function TaskDetailPanel({
           </div>
         </div>
 
-        {/* Action button */}
-        <a
-          href={task.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg border text-sm font-semibold transition-all duration-150"
-          style={{
-            background: "oklch(0.78 0.16 75 / 15%)",
-            borderColor: "oklch(0.78 0.16 75 / 40%)",
-            color: "oklch(0.78 0.16 75)",
-          }}
-        >
-          <ExternalLink size={14} />
-          Open Task in Manus
-        </a>
+        {/* Action buttons */}
+        <div className="flex gap-2">
+          <a
+            href={task.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 flex-1 py-2.5 rounded-lg border text-sm font-semibold transition-all duration-150"
+            style={{
+              background: "oklch(0.78 0.16 75 / 15%)",
+              borderColor: "oklch(0.78 0.16 75 / 40%)",
+              color: "oklch(0.78 0.16 75)",
+            }}
+          >
+            <ExternalLink size={14} />
+            Open in Manus
+          </a>
+          <button
+            onClick={() => downloadTaskJson(task)}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-semibold transition-all duration-150"
+            style={{
+              background: "oklch(0.55 0.15 250 / 15%)",
+              borderColor: "oklch(0.55 0.15 250 / 40%)",
+              color: "oklch(0.75 0.12 250)",
+            }}
+            title="Download task data as JSON"
+          >
+            <Download size={14} />
+            JSON
+          </button>
+        </div>
 
         <div className="mt-4 text-[10px] text-muted-foreground/50 text-center">
           Task ID: {task.url.split("/").pop() || task.num}
@@ -402,10 +431,19 @@ function TaskCard({
             {task.title}
           </h3>
         </div>
-        <ExternalLink
-          size={14}
-          className="text-muted-foreground/40 group-hover:text-amber-400 transition-colors duration-150 shrink-0 mt-0.5"
-        />
+        <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
+          <button
+            onClick={(e) => { e.stopPropagation(); downloadTaskJson(task); }}
+            title="Download task as JSON"
+            className="p-1 rounded text-muted-foreground/40 hover:text-amber-400 hover:bg-amber-400/10 transition-all duration-150"
+          >
+            <Download size={13} />
+          </button>
+          <ExternalLink
+            size={14}
+            className="text-muted-foreground/40 group-hover:text-amber-400 transition-colors duration-150"
+          />
+        </div>
       </div>
 
       {/* Meta row */}
