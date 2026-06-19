@@ -544,17 +544,19 @@ export default function Home() {
 
   // Stats
   const stats = useMemo(() => {
-    const totalCredits = tasks.reduce((s, t) => s + t.credits, 0);
-    const stopped = tasks.filter((t) => t.status === "stopped").length;
-    const waiting = tasks.filter((t) => t.status === "waiting").length;
-    const running = tasks.filter((t) => t.status === "running").length;
-    const projects = tasks.filter((t) => t.type === "project").length;
+    const t = Array.isArray(tasks) ? tasks : [];
+    const totalCredits = t.reduce((s, x) => s + x.credits, 0);
+    const stopped = t.filter((x) => x.status === "stopped").length;
+    const waiting = t.filter((x) => x.status === "waiting").length;
+    const running = t.filter((x) => x.status === "running").length;
+    const projects = t.filter((x) => x.type === "project").length;
     return { totalCredits, stopped, waiting, running, projects };
   }, [tasks]);
 
   // Filter counts
   const counts = useMemo(() => {
-    const base = tasks.filter((t) => {
+    const safeTasks2 = Array.isArray(tasks) ? tasks : [];
+    const base = safeTasks2.filter((t) => {
       if (hideSubtasks && isSubtask(t)) return false;
       if (debouncedSearch) {
         const q = debouncedSearch.toLowerCase();
@@ -583,7 +585,7 @@ export default function Home() {
 
   // Filtered + sorted tasks
   const filtered = useMemo(() => {
-    let result = tasks.filter((t) => {
+    let result = (Array.isArray(tasks) ? tasks : []).filter((t) => {
       if (hideSubtasks && isSubtask(t)) return false;
       if (debouncedSearch) {
         const q = debouncedSearch.toLowerCase();
@@ -608,7 +610,7 @@ export default function Home() {
   // Chart data — tasks by month
   const chartData = useMemo(() => {
     const byMonth: Record<string, number> = {};
-    tasks.forEach((t) => {
+    (Array.isArray(tasks) ? tasks : []).forEach((t) => {
       const m = t.created.slice(0, 7); // YYYY-MM
       byMonth[m] = (byMonth[m] || 0) + 1;
     });
@@ -695,7 +697,7 @@ export default function Home() {
           <div className="grid grid-cols-2 gap-2">
             <div className="rounded-md bg-card border border-border p-2.5 text-center">
               <div className="text-lg font-bold text-amber-400" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                {tasks.length}
+                {safeTasks.length}
               </div>
               <div className="text-[10px] text-muted-foreground">Total Tasks</div>
             </div>
@@ -903,7 +905,7 @@ export default function Home() {
           <div className="grid grid-cols-4 gap-3 mb-5">
             <StatCard icon={<Zap size={14} />} label="Total Tasks" value={safeTasks.length} sub="All time" amber />
             <StatCard icon={<Coins size={14} />} label="Credits Used" value={formatCredits(stats.totalCredits)} sub="Across all tasks" />
-            <StatCard icon={<CheckCircle2 size={14} />} label="Completed" value={stats.stopped} sub={`${Math.round((stats.stopped / tasks.length) * 100)}% completion rate`} />
+            <StatCard icon={<CheckCircle2 size={14} />} label="Completed" value={stats.stopped} sub={`${safeTasks.length > 0 ? Math.round((stats.stopped / safeTasks.length) * 100) : 0}% completion rate`} />
             <StatCard icon={<Clock size={14} />} label="Awaiting" value={stats.waiting} sub={`${stats.running} currently running`} />
           </div>
 
