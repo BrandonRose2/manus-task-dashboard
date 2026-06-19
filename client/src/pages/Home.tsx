@@ -1,4 +1,4 @@
-/**
+/*
  * Manus Task Dashboard — Executive Intelligence Dashboard
  * Design: Deep slate + amber gold, Space Grotesk display font
  * Layout: Fixed left sidebar (filters/stats) + main content (search + task grid)
@@ -6,6 +6,12 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BarChart,
@@ -34,6 +40,10 @@ import {
   Coins,
   Hash,
   Globe,
+  Lock,
+  MessageSquare,
+  Tag,
+  User,
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -87,6 +97,7 @@ const AGENT_LABELS: Record<string, string> = {
 };
 
 const LOGO_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663449376037/6HAcW2mfRmxrM6oLjQmHt6/logo-icon-WtjLyRW8qf6yaEgLNX8XN9.webp";
+const SESSION_KEY = "task_intel_unlocked";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -104,8 +115,148 @@ function isSubtask(task: Task): boolean {
   return task.title === "Wide Research Subtask" || task.type === "agent_subtask";
 }
 
-function isMainTask(task: Task): boolean {
-  return !isSubtask(task);
+// ─── Task Detail Panel ────────────────────────────────────────────────────────
+
+function TaskDetailPanel({
+  task,
+  open,
+  onClose,
+}: {
+  task: Task | null;
+  open: boolean;
+  onClose: () => void;
+}) {
+  if (!task) return null;
+  const status = STATUS_CONFIG[task.status] || STATUS_CONFIG.stopped;
+  const subtask = isSubtask(task);
+
+  return (
+    <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
+      <SheetContent
+        side="right"
+        className="w-full sm:max-w-md border-l border-border overflow-y-auto"
+        style={{ background: "var(--sidebar)", fontFamily: "'Space Grotesk', sans-serif" }}
+      >
+        <SheetHeader className="mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <span
+              className={`inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded border font-medium ${status.color}`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
+              {status.label}
+            </span>
+            {task.type === "project" && (
+              <span className="text-[10px] px-2 py-1 rounded border text-purple-400 bg-purple-400/10 border-purple-400/20 font-semibold">
+                Project
+              </span>
+            )}
+            {subtask && (
+              <span className="text-[10px] px-2 py-1 rounded border text-muted-foreground bg-muted/30 border-border font-semibold">
+                Subtask
+              </span>
+            )}
+            {task.credits > 1000 && (
+              <span className="text-[10px] px-2 py-1 rounded border text-amber-400 bg-amber-400/10 border-amber-400/20 font-semibold">
+                ★ High Value
+              </span>
+            )}
+          </div>
+          <SheetTitle
+            className="text-base font-bold leading-snug text-foreground"
+            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+          >
+            {task.title}
+          </SheetTitle>
+        </SheetHeader>
+
+        {/* Metadata grid */}
+        <div className="grid grid-cols-2 gap-3 mb-6">
+          <div className="rounded-lg bg-card border border-border p-3">
+            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground uppercase tracking-widest mb-1.5">
+              <Hash size={10} /> Task #
+            </div>
+            <div className="text-lg font-bold text-amber-400 font-mono">{task.num}</div>
+          </div>
+          <div className="rounded-lg bg-card border border-border p-3">
+            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground uppercase tracking-widest mb-1.5">
+              <Coins size={10} /> Credits
+            </div>
+            <div className={`text-lg font-bold font-mono ${task.credits > 500 ? "text-amber-400" : "text-foreground"}`}>
+              {task.credits.toLocaleString()}
+            </div>
+          </div>
+          <div className="rounded-lg bg-card border border-border p-3">
+            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground uppercase tracking-widest mb-1.5">
+              <MessageSquare size={10} /> Messages
+            </div>
+            <div className="text-lg font-bold text-foreground font-mono">{task.messages}</div>
+          </div>
+          <div className="rounded-lg bg-card border border-border p-3">
+            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground uppercase tracking-widest mb-1.5">
+              <Calendar size={10} /> Created
+            </div>
+            <div className="text-xs font-medium text-foreground mt-1">{formatDate(task.created)}</div>
+          </div>
+        </div>
+
+        {/* Details list */}
+        <div className="space-y-3 mb-6">
+          <div className="rounded-lg bg-card border border-border p-3 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Tag size={12} />
+              <span>Type</span>
+            </div>
+            <span className="text-xs font-semibold text-foreground">
+              {TYPE_LABELS[task.type] || task.type}
+            </span>
+          </div>
+          <div className="rounded-lg bg-card border border-border p-3 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Cpu size={12} />
+              <span>Agent</span>
+            </div>
+            <span className="text-xs font-semibold text-foreground font-mono">
+              {AGENT_LABELS[task.agent] || task.agent}
+            </span>
+          </div>
+          <div className="rounded-lg bg-card border border-border p-3 flex items-start justify-between gap-3">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground shrink-0">
+              <ExternalLink size={12} />
+              <span>Task URL</span>
+            </div>
+            <a
+              href={task.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[11px] text-amber-400 hover:text-amber-300 underline underline-offset-2 break-all text-right transition-colors"
+            >
+              Open in Manus →
+            </a>
+          </div>
+        </div>
+
+        {/* Action button */}
+        <a
+          href={task.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg border text-sm font-semibold transition-all duration-150"
+          style={{
+            background: "oklch(0.78 0.16 75 / 15%)",
+            borderColor: "oklch(0.78 0.16 75 / 40%)",
+            color: "oklch(0.78 0.16 75)",
+          }}
+        >
+          <ExternalLink size={14} />
+          Open Task in Manus
+        </a>
+
+        <div className="mt-4 text-[10px] text-muted-foreground/50 text-center">
+          Task ID: {task.url.split("/").pop() || task.num}
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -183,18 +334,24 @@ function FilterChip({
   );
 }
 
-function TaskCard({ task, index }: { task: Task; index: number }) {
+function TaskCard({
+  task,
+  index,
+  onClick,
+}: {
+  task: Task;
+  index: number;
+  onClick: () => void;
+}) {
   const status = STATUS_CONFIG[task.status] || STATUS_CONFIG.stopped;
   const subtask = isSubtask(task);
 
   // Subtasks get a stripped-down, visually recessed treatment
   if (subtask) {
     return (
-      <a
-        href={task.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="task-card block rounded border border-border/30 bg-card/30 px-3 py-2 group"
+      <div
+        onClick={onClick}
+        className="task-card block rounded border border-border/30 bg-card/30 px-3 py-2 group cursor-pointer"
         style={{ animationDelay: `${Math.min(index * 20, 400)}ms` }}
       >
         <div className="flex items-center justify-between gap-2">
@@ -206,16 +363,14 @@ function TaskCard({ task, index }: { task: Task; index: number }) {
             <ExternalLink size={10} className="text-muted-foreground/30 group-hover:text-muted-foreground transition-colors" />
           </div>
         </div>
-      </a>
+      </div>
     );
   }
 
   return (
-    <a
-      href={task.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="task-card block rounded-lg border border-border bg-card p-4 group"
+    <div
+      onClick={onClick}
+      className="task-card block rounded-lg border border-border bg-card p-4 group cursor-pointer hover:border-amber-400/30 transition-colors duration-150"
       style={{ animationDelay: `${Math.min(index * 20, 400)}ms` }}
     >
       {/* Header row */}
@@ -272,7 +427,7 @@ function TaskCard({ task, index }: { task: Task; index: number }) {
           <span>{formatDate(task.created)}</span>
         </span>
       </div>
-    </a>
+    </div>
   );
 }
 
@@ -293,6 +448,25 @@ export default function Home() {
   const searchRef = useRef<HTMLInputElement>(null);
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 60;
+
+  // Detail panel state
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+
+  function openDetail(task: Task) {
+    setSelectedTask(task);
+    setDetailOpen(true);
+  }
+
+  function closeDetail() {
+    setDetailOpen(false);
+  }
+
+  // Lock function — clears session and reloads
+  function lockDashboard() {
+    sessionStorage.removeItem(SESSION_KEY);
+    window.location.reload();
+  }
 
   // Load data
   useEffect(() => {
@@ -388,8 +562,10 @@ export default function Home() {
     return result;
   }, [tasks, debouncedSearch, statusFilter, typeFilter, agentFilter, hideSubtasks, sortBy]);
 
-  const paginated = filtered.slice(0, page * PAGE_SIZE);
-  const hasMore = paginated.length < filtered.length;
+  const safeTasks = Array.isArray(tasks) ? tasks : [];
+  const safeFiltered = Array.isArray(filtered) ? filtered : [];
+  const paginated = safeFiltered.slice(0, page * PAGE_SIZE);
+  const hasMore = paginated.length < safeFiltered.length;
 
   // Chart data — tasks by month
   const chartData = useMemo(() => {
@@ -429,6 +605,10 @@ export default function Home() {
       </div>
     );
   }
+
+  // Safe aliases used throughout render
+  const displayTasks = safeTasks;
+  const displayFiltered = safeFiltered;
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -606,6 +786,18 @@ export default function Home() {
             </button>
           </div>
         )}
+
+        {/* Lock button */}
+        <div className="px-3 py-3 border-t border-border">
+          <button
+            onClick={lockDashboard}
+            className="flex items-center gap-2 px-3 py-2 rounded-md text-xs font-medium border border-border/50 text-muted-foreground hover:text-red-400 hover:border-red-400/30 hover:bg-red-400/5 transition-all duration-150 w-full"
+            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+          >
+            <Lock size={12} />
+            Lock Dashboard
+          </button>
+        </div>
       </aside>
 
       {/* ── Main Content ── */}
@@ -663,15 +855,15 @@ export default function Home() {
           </div>
 
           {/* Result count */}
-          <div className="text-xs text-muted-foreground shrink-0" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-            <span className="text-foreground font-medium">{filtered.length}</span> / {tasks.length}
+            <div className="text-xs text-muted-foreground shrink-0" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+            <span className="text-foreground font-medium">{displayFiltered.length}</span> / {safeTasks.length}
           </div>
         </div>
 
         <div className="flex-1 px-6 py-5">
           {/* Stats row */}
           <div className="grid grid-cols-4 gap-3 mb-5">
-            <StatCard icon={<Zap size={14} />} label="Total Tasks" value={tasks.length} sub="All time" amber />
+            <StatCard icon={<Zap size={14} />} label="Total Tasks" value={safeTasks.length} sub="All time" amber />
             <StatCard icon={<Coins size={14} />} label="Credits Used" value={formatCredits(stats.totalCredits)} sub="Across all tasks" />
             <StatCard icon={<CheckCircle2 size={14} />} label="Completed" value={stats.stopped} sub={`${Math.round((stats.stopped / tasks.length) * 100)}% completion rate`} />
             <StatCard icon={<Clock size={14} />} label="Awaiting" value={stats.waiting} sub={`${stats.running} currently running`} />
@@ -770,7 +962,7 @@ export default function Home() {
           )}
 
           {/* Task grid / list */}
-          {filtered.length === 0 ? (
+          {displayFiltered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <Search size={32} className="text-muted-foreground mb-3 opacity-40" />
               <div className="text-sm font-medium text-muted-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
@@ -788,7 +980,7 @@ export default function Home() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                 {paginated.map((task, i) => (
                   <div key={task.num} className="fade-slide-in">
-                    <TaskCard task={task} index={i} />
+                    <TaskCard task={task} index={i} onClick={() => openDetail(task)} />
                   </div>
                 ))}
               </div>
@@ -799,7 +991,7 @@ export default function Home() {
                     className="px-6 py-2 rounded-md border border-border text-sm text-muted-foreground hover:text-foreground hover:border-amber-400/40 transition-all"
                     style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                   >
-                    Load more ({filtered.length - paginated.length} remaining)
+                    Load more ({displayFiltered.length - paginated.length} remaining)
                   </button>
                 </div>
               )}
@@ -827,21 +1019,18 @@ export default function Home() {
                       return (
                         <tr
                           key={task.num}
-                          className={`border-b border-border/50 hover:bg-card/60 transition-colors group ${isSubtask(task) ? "opacity-60 hover:opacity-100" : ""}`}
+                          onClick={() => openDetail(task)}
+                          className={`border-b border-border/50 hover:bg-card/60 transition-colors group cursor-pointer ${isSubtask(task) ? "opacity-60 hover:opacity-100" : ""}`}
                           style={{ animationDelay: `${Math.min(i * 10, 200)}ms` }}
                         >
                           <td className="px-4 py-2.5 text-[11px] text-muted-foreground font-mono">{task.num}</td>
                           <td className="px-4 py-2.5 max-w-xs">
-                            <a
-                              href={task.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-sm font-medium text-foreground hover:text-amber-400 transition-colors line-clamp-1 flex items-center gap-1.5 group/link"
+                            <span
+                              className="text-sm font-medium text-foreground group-hover:text-amber-400 transition-colors line-clamp-1"
                               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                             >
                               {task.title}
-                              <ExternalLink size={11} className="opacity-0 group-hover/link:opacity-100 transition-opacity shrink-0" />
-                            </a>
+                            </span>
                           </td>
                           <td className="px-4 py-2.5">
                             <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border font-medium ${status.color}`}>
@@ -854,9 +1043,7 @@ export default function Home() {
                           <td className="px-4 py-2.5 text-right text-[11px] font-mono text-foreground">{formatCredits(task.credits)}</td>
                           <td className="px-4 py-2.5 text-xs text-muted-foreground">{formatDate(task.created)}</td>
                           <td className="px-4 py-2.5">
-                            <a href={task.url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-amber-400 transition-colors">
-                              <ExternalLink size={13} />
-                            </a>
+                            <ExternalLink size={13} className="text-muted-foreground/40 group-hover:text-amber-400 transition-colors" />
                           </td>
                         </tr>
                       );
@@ -871,7 +1058,7 @@ export default function Home() {
                     className="px-6 py-2 rounded-md border border-border text-sm text-muted-foreground hover:text-foreground hover:border-amber-400/40 transition-all"
                     style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                   >
-                    Load more ({filtered.length - paginated.length} remaining)
+                    Load more ({displayFiltered.length - paginated.length} remaining)
                   </button>
                 </div>
               )}
@@ -881,7 +1068,7 @@ export default function Home() {
 
         {/* Footer */}
         <div className="border-t border-border px-6 py-3 flex items-center justify-between">
-          <div className="text-[11px] text-muted-foreground" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+              <div className="text-[11px] text-muted-foreground" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
             Backup: 2026-06-18 · Brandon@apartmentcorp.com
           </div>
           <div className="text-[11px] text-muted-foreground flex items-center gap-1" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
@@ -890,6 +1077,9 @@ export default function Home() {
           </div>
         </div>
       </main>
+
+      {/* ── Task Detail Panel ── */}
+      <TaskDetailPanel task={selectedTask} open={detailOpen} onClose={closeDetail} />
     </div>
   );
 }
