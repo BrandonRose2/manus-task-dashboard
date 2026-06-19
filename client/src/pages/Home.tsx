@@ -298,8 +298,10 @@ export default function Home() {
   useEffect(() => {
     fetch("/tasks_data.json")
       .then((r) => r.json())
-      .then((data: Task[]) => {
-        setTasks(data);
+      .then((data: { tasks?: Task[] } | Task[]) => {
+        // Handle both {tasks: [...]} and plain array formats
+        const taskList = Array.isArray(data) ? data : (data as { tasks?: Task[] }).tasks ?? [];
+        setTasks(taskList);
         setLoading(false);
       })
       .catch(() => setLoading(false));
