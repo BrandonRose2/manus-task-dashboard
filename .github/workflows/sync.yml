@@ -2,7 +2,7 @@ name: Sync Manus Tasks
 
 on:
   schedule:
-    # Runs every Monday at 6:00 AM PST (14:00 UTC / 2:00 PM UTC)
+    # Runs every Monday at 6:00 AM PST
     - cron: "0 14 * * 1"
   workflow_dispatch:
     # Also allows manual trigger from GitHub Actions UI
@@ -38,7 +38,7 @@ jobs:
           git config user.name "Manus Sync Bot"
           git config user.email "sync-bot@manus-dashboard.local"
           git add client/public/tasks_data.json
-          git commit -m "chore: sync tasks from Manus API [$(date -u '+%Y-%m-%d %H:%M UTC')]"
+          git commit -m "chore: sync tasks from Manus API [$(TZ='America/Los_Angeles' date '+%Y-%m-%d %H:%M PST')]"
           git push
 
       - name: No changes detected
