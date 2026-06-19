@@ -6,6 +6,9 @@ import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  server: {
+    allowedHosts: "all",
+  },
   base: "/manus-task-dashboard/",
   plugins: [react(), tailwindcss(), vitePluginManusRuntime()],
   resolve: {
