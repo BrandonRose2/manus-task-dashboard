@@ -47,6 +47,7 @@ import {
   Download,
 } from "lucide-react";
 import { Link } from "wouter";
+import { trpc } from "@/lib/trpc";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -62,17 +63,26 @@ function downloadTaskJson(task: Task) {
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-
 interface Task {
-  num: number;
+  // API fields (from Manus API v2)
+  id: string;
   title: string;
-  url: string;
+  task_url: string;
   status: "stopped" | "running" | "waiting" | string;
-  type: "standard" | "project" | "agent_subtask" | string;
-  agent: string;
-  credits: number;
-  created: string;
-  messages: number;
+  task_type: "standard" | "project" | "agent_subtask" | string;
+  agent_profile: string;
+  credit_usage: number;
+  created_at: string; // Unix timestamp string
+  updated_at: string;
+  share_visibility: string;
+  // Computed / legacy aliases (for backward compat with template)
+  num: number;       // index-based fallback
+  url: string;       // alias for task_url
+  type: string;      // alias for task_type
+  agent: string;     // alias for agent_profile
+  credits: number;   // alias for credit_usage
+  created: string;   // ISO date string derived from created_at
+  messages: number;  // not in API, default 0
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -111,6 +121,7 @@ const AGENT_LABELS: Record<string, string> = {
 };
 
 const LOGO_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663449376037/6HAcW2mfRmxrM6oLjQmHt6/logo-icon-WtjLyRW8qf6yaEgLNX8XN9.webp";
+
 const SESSION_KEY = "task_intel_unlocked";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -506,18 +517,51 @@ export default function Home() {
     window.location.reload();
   }
 
-  // Load data
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadProgress, setLoadProgress] = useState(0);
+  const [fetchCursor, setFetchCursor] = useState<string | undefined>(undefined);
+  const [allRawTasks, setAllRawTasks] = useState<Task[]>([]);
+  const [fetchDone, setFetchDone] = useState(false);
+
+  // Fetch one page at a time via tRPC proxy (server-side API key, no CORS issues)
+  const { data: pageData, error: pageError } = trpc.tasks.list.useQuery(
+    { cursor: fetchCursor, limit: 100 },
+    { enabled: !fetchDone && loadError === null }
+  );
+
   useEffect(() => {
-    fetch("/tasks_data.json")
-      .then((r) => r.json())
-      .then((data: { tasks?: Task[] } | Task[]) => {
-        // Handle both {tasks: [...]} and plain array formats
-        const taskList = Array.isArray(data) ? data : (data as { tasks?: Task[] }).tasks ?? [];
-        setTasks(taskList);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, []);
+    if (!pageData) return;
+    const raw = pageData.tasks;
+    const mapped: Task[] = raw.map((t, i) => ({
+      ...t,
+      num: allRawTasks.length + i + 1,
+      url: t.task_url,
+      type: t.task_type,
+      agent: t.agent_profile,
+      credits: t.credit_usage,
+      created: new Date(Number(t.created_at) * 1000).toISOString(),
+      messages: 0,
+    }));
+    const combined = [...allRawTasks, ...mapped];
+    setAllRawTasks(combined);
+    setLoadProgress(combined.length);
+    // Show incremental results
+    setTasks(combined.map((t, i) => ({ ...t, num: i + 1 })));
+    if (pageData.has_more && pageData.next_cursor) {
+      setFetchCursor(pageData.next_cursor);
+    } else {
+      setFetchDone(true);
+      setLoading(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageData]);
+
+  useEffect(() => {
+    if (pageError) {
+      setLoadError(pageError.message);
+      setLoading(false);
+    }
+  }, [pageError]);
 
   // Debounce search
   useEffect(() => {
@@ -633,14 +677,25 @@ export default function Home() {
     setSearch("");
   }
 
-  if (loading) {
+  if (loading && tasks.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <img src={LOGO_URL} alt="Logo" className="w-12 h-12 mx-auto mb-4 opacity-80" />
-          <div className="text-muted-foreground text-sm" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-            Loading task data...
-          </div>
+          {loadError ? (
+            <div className="text-red-400 text-sm mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              {loadError}
+            </div>
+          ) : (
+            <>
+              <div className="text-muted-foreground text-sm mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                Fetching tasks from Manus API…
+              </div>
+              {loadProgress > 0 && (
+                <div className="text-amber-400 text-xs font-mono">{loadProgress} tasks loaded</div>
+              )}
+            </>
+          )}
         </div>
       </div>
     );
@@ -668,7 +723,7 @@ export default function Home() {
               <div className="text-[10px] text-muted-foreground mt-0.5 tracking-wide">ApartmentCorp · Brandon</div>
             </div>
           </div>
-          <div className="mt-2 text-[10px] text-muted-foreground/60 font-mono">Backup: 2026-06-18</div>
+          <div className="mt-2 text-[10px] text-muted-foreground/60 font-mono">Live · {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</div>
         </div>
 
         {/* Navigation */}
@@ -1109,7 +1164,7 @@ export default function Home() {
         {/* Footer */}
         <div className="border-t border-border px-6 py-3 flex items-center justify-between">
               <div className="text-[11px] text-muted-foreground" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-            Backup: 2026-06-18 · Brandon@apartmentcorp.com
+            Live · {tasks.length} tasks · {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
           </div>
           <div className="text-[11px] text-muted-foreground flex items-center gap-1" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
             <img src={LOGO_URL} alt="" className="w-3.5 h-3.5 opacity-50" />
