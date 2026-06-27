@@ -45,6 +45,8 @@ import {
   Tag,
   User,
   Download,
+  Menu,
+  SlidersHorizontal,
 } from "lucide-react";
 import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -497,6 +499,7 @@ export default function Home() {
   const searchRef = useRef<HTMLInputElement>(null);
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 60;
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Detail panel state
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -707,12 +710,29 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background flex">
+      {/* ── Mobile sidebar overlay ── */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* ── Sidebar ── */}
-      <aside className="w-60 shrink-0 border-r border-border flex flex-col sticky top-0 h-screen overflow-y-auto"
+      <aside
+        className={`fixed md:static inset-y-0 left-0 z-50 w-72 md:w-60 shrink-0 border-r border-border flex flex-col h-screen overflow-y-auto transition-transform duration-300 ease-out ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+        }`}
         style={{ background: "var(--sidebar)" }}>
         {/* Brand */}
         <div className="px-4 py-4 border-b border-border">
           <div className="flex items-center gap-2.5 mb-1">
+            <button
+              className="md:hidden ml-auto p-1 text-muted-foreground hover:text-foreground absolute top-3 right-3"
+              onClick={() => setSidebarOpen(false)}
+            >
+              <X size={16} />
+            </button>
             <div className="w-8 h-8 rounded-md flex items-center justify-center" style={{ background: "oklch(0.78 0.16 75 / 15%)", border: "1px solid oklch(0.78 0.16 75 / 30%)" }}>
               <img src={LOGO_URL} alt="Logo" className="w-5 h-5" />
             </div>
@@ -896,18 +916,27 @@ export default function Home() {
       </aside>
 
       {/* ── Main Content ── */}
-      <main className="flex-1 min-w-0 flex flex-col">
+      <main className="flex-1 min-w-0 flex flex-col w-full md:w-auto">
         {/* Top bar */}
-        <div className="sticky top-0 z-10 border-b border-border px-6 py-3 flex items-center gap-4"
+        <div className="sticky top-0 z-10 border-b border-border px-3 md:px-6 py-3 flex items-center gap-2 md:gap-4"
           style={{ background: "oklch(0.13 0.015 260 / 96%)", backdropFilter: "blur(16px)", borderBottom: "1px solid oklch(0.78 0.16 75 / 15%)" }}>
+
+          {/* Hamburger — mobile only */}
+          <button
+            className="md:hidden flex items-center justify-center w-9 h-9 rounded-md border border-border bg-card text-muted-foreground hover:text-foreground shrink-0"
+            onClick={() => setSidebarOpen(true)}
+          >
+            <Menu size={16} />
+          </button>
+
           {/* Search */}
-          <div className="relative flex-1 max-w-xl">
+          <div className="relative flex-1">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <Input
               ref={searchRef}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search tasks… (⌘K)"
+              placeholder="Search tasks…"
               className="pl-9 pr-8 h-9 bg-card border-border text-sm placeholder:text-muted-foreground focus-visible:ring-amber-400/40"
               style={{ fontFamily: "'Inter', sans-serif" }}
             />
@@ -921,20 +950,20 @@ export default function Home() {
             )}
           </div>
 
-          {/* Sort */}
+          {/* Sort — hidden on smallest screens, shown md+ */}
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-            className="h-9 px-3 rounded-md border border-border bg-card text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-amber-400/40"
+            className="hidden sm:block h-9 px-3 rounded-md border border-border bg-card text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-amber-400/40 shrink-0"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
-            <option value="newest">Newest First</option>
-            <option value="oldest">Oldest First</option>
-            <option value="credits">Most Credits</option>
+            <option value="newest">Newest</option>
+            <option value="oldest">Oldest</option>
+            <option value="credits">Credits</option>
           </select>
 
           {/* View toggle */}
-          <div className="flex items-center gap-1 bg-card border border-border rounded-md p-0.5">
+          <div className="flex items-center gap-1 bg-card border border-border rounded-md p-0.5 shrink-0">
             <button
               onClick={() => setViewMode("grid")}
               className={`p-1.5 rounded transition-colors ${viewMode === "grid" ? "bg-amber-400/20 text-amber-400" : "text-muted-foreground hover:text-foreground"}`}
@@ -949,15 +978,15 @@ export default function Home() {
             </button>
           </div>
 
-          {/* Result count */}
-            <div className="text-xs text-muted-foreground shrink-0" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-            <span className="text-foreground font-medium">{displayFiltered.length}</span> / {safeTasks.length}
+          {/* Result count — hidden on mobile */}
+          <div className="hidden sm:block text-xs text-muted-foreground shrink-0" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+            <span className="text-foreground font-medium">{displayFiltered.length}</span>/{safeTasks.length}
           </div>
         </div>
 
-        <div className="flex-1 px-6 py-5">
+        <div className="flex-1 px-3 md:px-6 py-4 md:py-5">
           {/* Stats row */}
-          <div className="grid grid-cols-4 gap-3 mb-5">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 mb-4 md:mb-5">
             <StatCard icon={<Zap size={14} />} label="Total Tasks" value={safeTasks.length} sub="All time" amber />
             <StatCard icon={<Coins size={14} />} label="Credits Used" value={formatCredits(stats.totalCredits)} sub="Across all tasks" />
             <StatCard icon={<CheckCircle2 size={14} />} label="Completed" value={stats.stopped} sub={`${safeTasks.length > 0 ? Math.round((stats.stopped / safeTasks.length) * 100) : 0}% completion rate`} />
@@ -1094,7 +1123,8 @@ export default function Home() {
           ) : (
             /* List view */
             <>
-              <div className="rounded-lg border border-border overflow-hidden">
+              {/* Desktop table */}
+              <div className="hidden md:block rounded-lg border border-border overflow-hidden">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border bg-card/50">
@@ -1146,6 +1176,38 @@ export default function Home() {
                   </tbody>
                 </table>
               </div>
+
+              {/* Mobile card list */}
+              <div className="md:hidden space-y-2">
+                {paginated.map((task) => {
+                  const status = STATUS_CONFIG[task.status] || STATUS_CONFIG.stopped;
+                  return (
+                    <button
+                      key={task.num}
+                      onClick={() => openDetail(task)}
+                      className={`w-full text-left rounded-lg border border-border bg-card p-3 active:scale-[0.99] transition-all ${isSubtask(task) ? "opacity-60" : ""}`}
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-1.5">
+                        <span
+                          className="text-sm font-medium text-foreground line-clamp-2 flex-1"
+                          style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                        >
+                          {task.title}
+                        </span>
+                        <ExternalLink size={12} className="text-muted-foreground/40 shrink-0 mt-0.5" />
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border font-medium ${status.color}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
+                          {status.label}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground font-mono">{formatCredits(task.credits)} cr</span>
+                        <span className="text-[10px] text-muted-foreground">{formatDate(task.created)}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
               {hasMore && (
                 <div className="flex justify-center mt-6">
                   <button
@@ -1162,7 +1224,7 @@ export default function Home() {
         </div>
 
         {/* Footer */}
-        <div className="border-t border-border px-6 py-3 flex items-center justify-between">
+        <div className="border-t border-border px-3 md:px-6 py-3 flex items-center justify-between">
               <div className="text-[11px] text-muted-foreground" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
             Live · {tasks.length} tasks · {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
           </div>

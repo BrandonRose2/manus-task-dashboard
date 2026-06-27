@@ -24,3 +24,10 @@
 - [x] Upgraded to full-stack (Express + tRPC + Vite)
 - [x] MANUS_API_KEY stored as server-side secret
 - [x] Vitest tests for API key and auth logout
+
+## Mobile
+- [x] Responsive layout for iPhone (hamburger menu, slide-in sidebar drawer)
+- [x] 2x2 stats grid on mobile
+- [x] Mobile card-style list view (replaces wide table on small screens)
+- [x] Responsive top bar (sort hidden on xs, compact padding)
+- [x] Touch-friendly tap targets throughout
