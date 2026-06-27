@@ -83,8 +83,8 @@ export default function PinLock({ children }: PinLockProps) {
     if (digits.length === 4 && !checking) {
       setChecking(true);
       sha256(digits.join("")).then((hash) => {
-        // Compare against pre-computed hash of "3698"
-        sha256("3698").then((correctHash) => {
+        // Compare against pre-computed hash of "9513"
+        sha256("9513").then((correctHash) => {
           if (hash === correctHash) {
             sessionStorage.setItem(SESSION_KEY, "true");
             setTimeout(() => setUnlocked(true), 300);
