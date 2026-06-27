@@ -47,6 +47,7 @@ import {
   Download,
   Menu,
   SlidersHorizontal,
+  RefreshCw,
 } from "lucide-react";
 import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -500,6 +501,8 @@ export default function Home() {
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 60;
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const utils = trpc.useUtils();
 
   // Detail panel state
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -518,6 +521,20 @@ export default function Home() {
   function lockDashboard() {
     sessionStorage.removeItem(SESSION_KEY);
     window.location.reload();
+  }
+  // Refresh — reset all fetch state and re-fetch from scratch
+  async function handleRefresh() {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    setAllRawTasks([]);
+    setTasks([]);
+    setFetchCursor(undefined);
+    setFetchDone(false);
+    setLoadError(null);
+    setLoadProgress(0);
+    setLoading(true);
+    await utils.tasks.list.invalidate();
+    setTimeout(() => setIsRefreshing(false), 1000);
   }
 
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -736,9 +753,17 @@ export default function Home() {
             <div className="w-8 h-8 rounded-md flex items-center justify-center" style={{ background: "oklch(0.78 0.16 75 / 15%)", border: "1px solid oklch(0.78 0.16 75 / 30%)" }}>
               <img src={LOGO_URL} alt="Logo" className="w-5 h-5" />
             </div>
-            <div>
-              <div className="text-sm font-bold leading-none" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.78 0.16 75)" }}>
-                TASK INTEL
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <div className="text-sm font-bold leading-none" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.78 0.16 75)" }}>
+                  TASK INTEL
+                </div>
+                {stats.running > 0 && (
+                  <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-400/20 border border-amber-400/40 text-amber-400 text-[9px] font-bold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                    {stats.running} running
+                  </span>
+                )}
               </div>
               <div className="text-[10px] text-muted-foreground mt-0.5 tracking-wide">ApartmentCorp · Brandon</div>
             </div>
@@ -921,12 +946,26 @@ export default function Home() {
         <div className="sticky top-0 z-10 border-b border-border px-3 md:px-6 py-3 flex items-center gap-2 md:gap-4"
           style={{ background: "oklch(0.13 0.015 260 / 96%)", backdropFilter: "blur(16px)", borderBottom: "1px solid oklch(0.78 0.16 75 / 15%)" }}>
 
-          {/* Hamburger — mobile only */}
+          {/* Hamburger — mobile only, with running badge */}
           <button
-            className="md:hidden flex items-center justify-center w-9 h-9 rounded-md border border-border bg-card text-muted-foreground hover:text-foreground shrink-0"
+            className="md:hidden relative flex items-center justify-center w-9 h-9 rounded-md border border-border bg-card text-muted-foreground hover:text-foreground shrink-0"
             onClick={() => setSidebarOpen(true)}
           >
             <Menu size={16} />
+            {stats.running > 0 && (
+              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-400 text-[9px] font-bold text-black">
+                {stats.running > 9 ? '9+' : stats.running}
+              </span>
+            )}
+          </button>
+          {/* Refresh button */}
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing || loading}
+            className="flex items-center justify-center w-9 h-9 rounded-md border border-border bg-card text-muted-foreground hover:text-foreground shrink-0 disabled:opacity-40 transition-colors"
+            title="Refresh tasks"
+          >
+            <RefreshCw size={14} className={isRefreshing || loading ? 'animate-spin' : ''} />
           </button>
 
           {/* Search */}

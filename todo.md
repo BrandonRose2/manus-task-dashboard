@@ -31,3 +31,8 @@
 - [x] Mobile card-style list view (replaces wide table on small screens)
 - [x] Responsive top bar (sort hidden on xs, compact padding)
 - [x] Touch-friendly tap targets throughout
+
+## Upcoming Features
+- [x] PWA manifest.json + iPhone home screen meta tags (Add to Home Screen)
+- [x] Tap-to-refresh button in mobile top bar
+- [x] Running tasks alert badge on hamburger button / sidebar
