@@ -36,3 +36,7 @@
 - [x] PWA manifest.json + iPhone home screen meta tags (Add to Home Screen)
 - [x] Tap-to-refresh button in mobile top bar
 - [x] Running tasks alert badge on hamburger button / sidebar
+
+## GitHub Repositories
+- [x] Fetch all GitHub repos for BrandonRose2 via GitHub API
+- [x] Add GitHub Repositories page/sidebar nav item with repo cards and links

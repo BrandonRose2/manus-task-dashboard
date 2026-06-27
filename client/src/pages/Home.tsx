@@ -48,6 +48,7 @@ import {
   Menu,
   SlidersHorizontal,
   RefreshCw,
+  Github,
 } from "lucide-react";
 import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -786,6 +787,15 @@ export default function Home() {
             <Globe size={13} />
             Apps &amp; Websites
             <span className="ml-auto text-[10px] bg-muted px-1.5 py-0.5 rounded font-mono text-muted-foreground">42</span>
+          </Link>
+          <Link
+            href="/github"
+            className="flex items-center gap-2 px-3 py-2 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-accent transition-colors border border-transparent"
+            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+          >
+            <Github size={13} />
+            GitHub Repos
+            <span className="ml-auto text-[10px] bg-muted px-1.5 py-0.5 rounded font-mono text-muted-foreground">30</span>
           </Link>
         </div>
 

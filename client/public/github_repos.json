@@ -1,0 +1,184 @@
+[
+  {
+    "name": "brandons-task-vault",
+    "url": "https://github.com/BrandonRose2/brandons-task-vault",
+    "description": "Brandon Rose's Manus Task Intelligence Dashboard - searchable archive of tasks from ApartmentCorp Manus account",
+    "category": "ApartmentCorp Tools",
+    "updated": "2026-06-26"
+  },
+  {
+    "name": "all-tasks-backup-portal",
+    "url": "https://github.com/BrandonRose2/all-tasks-backup-portal",
+    "description": "Claude and Manus Tasks Backup Portal",
+    "category": "ApartmentCorp Tools",
+    "updated": "2026-06-26"
+  },
+  {
+    "name": "investor-portal",
+    "url": "https://github.com/BrandonRose2/investor-portal",
+    "description": "Portal to host list of Investors that hold stakes in the various ApartmentCorp Buildings.",
+    "category": "ApartmentCorp Tools",
+    "updated": "2026-06-25"
+  },
+  {
+    "name": "monthly-inspections",
+    "url": "https://github.com/BrandonRose2/monthly-inspections",
+    "description": "Portal to track managers monthly inspections of property units.",
+    "category": "ApartmentCorp Tools",
+    "updated": "2026-06-24"
+  },
+  {
+    "name": "referral-flyer-webapp",
+    "url": "https://github.com/BrandonRose2/referral-flyer-webapp",
+    "description": "A portal that managers can easily choose their property and it looks up property photos in a drive folder.",
+    "category": "ApartmentCorp Tools",
+    "updated": "2026-06-19"
+  },
+  {
+    "name": "inspector-operations-suite",
+    "url": "https://github.com/BrandonRose2/inspector-operations-suite",
+    "description": "A portal that hosts inspection forms managers use for the monthly inspections.",
+    "category": "ApartmentCorp Tools",
+    "updated": "2026-06-19"
+  },
+  {
+    "name": "managers-data-collection-portal",
+    "url": "https://github.com/BrandonRose2/managers-data-collection-portal",
+    "description": "A portal that collects multiple specified data points from all of the regional managers in one place.",
+    "category": "ApartmentCorp Tools",
+    "updated": "2026-06-19"
+  },
+  {
+    "name": "edd-audit-checklist",
+    "url": "https://github.com/BrandonRose2/edd-audit-checklist",
+    "description": "EDD audit checklist tool.",
+    "category": "ApartmentCorp Tools",
+    "updated": "2026-05-10"
+  },
+  {
+    "name": "motionsites.ai",
+    "url": "https://github.com/BrandonRose2/motionsites.ai",
+    "description": "motionsites.ai",
+    "category": "AI Projects",
+    "updated": "2026-06-26"
+  },
+  {
+    "name": "Open-Generative-AI",
+    "url": "https://github.com/BrandonRose2/Open-Generative-AI",
+    "description": "Unrestricted open-source alternative to AI video platforms — Free AI image & video generation studio with 200+ models (Flux, Midjourney, Kling, Sora, Veo). No content filters. Self-hosted, MIT licensed.",
+    "category": "AI Projects",
+    "updated": "2026-06-27"
+  },
+  {
+    "name": "OpenMontage",
+    "url": "https://github.com/BrandonRose2/OpenMontage",
+    "description": "World's first open-source, agentic video production system. 12 pipelines, 52 tools, 500+ agent skills.",
+    "category": "AI Projects",
+    "updated": "2026-06-26"
+  },
+  {
+    "name": "locally-uncensored",
+    "url": "https://github.com/BrandonRose2/locally-uncensored",
+    "description": "Local AI desktop app: chat, agent mode, image gen, video gen. Runs fully offline with your LLM provider. Single .exe, no Docker.",
+    "category": "AI Projects",
+    "updated": "2026-06-26"
+  },
+  {
+    "name": "inbrowser-agent",
+    "url": "https://github.com/BrandonRose2/inbrowser-agent",
+    "description": "The in-browser AI stack",
+    "category": "AI Projects",
+    "updated": "2026-06-25"
+  },
+  {
+    "name": "Instagram-AI-Agent",
+    "url": "https://github.com/BrandonRose2/Instagram-AI-Agent",
+    "description": "Instagram AI Agent built using Node.js and TypeScript, designed for seamless job execution.",
+    "category": "AI Projects",
+    "updated": "2025-04-20"
+  },
+  {
+    "name": "FREE-openai-api-keys",
+    "url": "https://github.com/BrandonRose2/FREE-openai-api-keys",
+    "description": "Collection for free OpenAI keys to use in your projects",
+    "category": "AI Projects",
+    "updated": "2026-06-27"
+  },
+  {
+    "name": "awesome-nano-banana-pro-prompts",
+    "url": "https://github.com/BrandonRose2/awesome-nano-banana-pro-prompts",
+    "description": "8000+ selected Nano Banana Pro prompts with images, multilingual support, and instant gallery preview.",
+    "category": "AI Projects",
+    "updated": "2026-02-12"
+  },
+  {
+    "name": "claude-code-ui-agents",
+    "url": "https://github.com/BrandonRose2/claude-code-ui-agents",
+    "description": "A curated collection of Claude AI agent prompts specifically designed for UI/UX design, web development, and frontend tasks.",
+    "category": "AI Projects",
+    "updated": "2026-06-27"
+  },
+  {
+    "name": "ui-ux-design-prompts",
+    "url": "https://github.com/BrandonRose2/ui-ux-design-prompts",
+    "description": "Comprehensive collection of UI/UX design, web development, and frontend tasks. Transform your design workflow with specialized prompts.",
+    "category": "AI Projects",
+    "updated": "2026-06-27"
+  },
+  {
+    "name": "project-management",
+    "url": "https://github.com/BrandonRose2/project-management",
+    "description": "An open-source project management platform built with ReactJS and Tailwind CSS.",
+    "category": "Web Apps",
+    "updated": "2026-06-26"
+  },
+  {
+    "name": "chat_application",
+    "url": "https://github.com/BrandonRose2/chat_application",
+    "description": "Real-time chat application built with React.js and Socket.io.",
+    "category": "Web Apps",
+    "updated": "2026-06-26"
+  },
+  {
+    "name": "piano-composition-mastery",
+    "url": "https://github.com/BrandonRose2/piano-composition-mastery",
+    "description": "A webpage portal you can drop piano sheet music into and it creates a customized plan to learn the piece in a month.",
+    "category": "Web Apps",
+    "updated": "2026-06-25"
+  },
+  {
+    "name": "public-apis",
+    "url": "https://github.com/BrandonRose2/public-apis",
+    "description": "A collective list of free APIs",
+    "category": "Resources & References",
+    "updated": "2026-06-27"
+  },
+  {
+    "name": "everything-claude-code",
+    "url": "https://github.com/BrandonRose2/everything-claude-code",
+    "description": "Copy of affaan-m/everything-claude-code",
+    "category": "Resources & References",
+    "updated": "2026-06-26"
+  },
+  {
+    "name": "rust-client",
+    "url": "https://github.com/BrandonRose2/rust-client",
+    "description": "Rust client for Qdrant vector search engine",
+    "category": "Resources & References",
+    "updated": "2026-06-25"
+  },
+  {
+    "name": "skills-introduction-to-github",
+    "url": "https://github.com/BrandonRose2/skills-introduction-to-github",
+    "description": "Intro to GitHub",
+    "category": "Resources & References",
+    "updated": "2025-04-20"
+  },
+  {
+    "name": "BrandonRose2",
+    "url": "https://github.com/BrandonRose2/BrandonRose2",
+    "description": "Config files for my GitHub profile.",
+    "category": "Resources & References",
+    "updated": "2026-06-21"
+  }
+]
