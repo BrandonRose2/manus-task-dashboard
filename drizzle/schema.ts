@@ -26,3 +26,20 @@ export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
 // TODO: Add your tables here
+
+/**
+ * Manually linked GitHub repositories for task cards.
+ * taskId is the Manus task ID (string). One task can have at most one linked repo.
+ */
+export const taskRepoLinks = mysqlTable("taskRepoLinks", {
+  id: int("id").autoincrement().primaryKey(),
+  taskId: varchar("taskId", { length: 128 }).notNull().unique(),
+  repoName: varchar("repoName", { length: 255 }).notNull(),
+  repoUrl: varchar("repoUrl", { length: 512 }).notNull(),
+  repoFullName: varchar("repoFullName", { length: 255 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type TaskRepoLink = typeof taskRepoLinks.$inferSelect;
+export type InsertTaskRepoLink = typeof taskRepoLinks.$inferInsert;

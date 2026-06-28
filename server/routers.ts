@@ -3,6 +3,9 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { z } from "zod";
+import { getDb } from "./db";
+import { taskRepoLinks } from "../drizzle/schema";
+import { eq } from "drizzle-orm";
 
 // Manus API key stored server-side — never exposed to the browser
 const MANUS_API_KEY = process.env.MANUS_API_KEY ?? "";
@@ -97,11 +100,13 @@ export const appRouter = router({
         private: boolean;
         stargazers_count: number;
         language: string | null;
+        full_name: string;
       }>;
 
       // Return just the names (and URLs) for the indicator lookup
       return repos.map(r => ({
         name: r.name,
+        fullName: r.full_name,
         url: r.html_url,
         description: r.description,
         updatedAt: r.updated_at,
@@ -150,14 +155,77 @@ export const appRouter = router({
         const repo = await res.json() as {
           name: string;
           html_url: string;
+          full_name: string;
           description: string | null;
         };
 
         return {
           name: repo.name,
+          fullName: repo.full_name,
           url: repo.html_url,
           description: repo.description,
         };
+      }),
+
+    // Fetch all manually linked repos from DB
+    getLinks: publicProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return [];
+      const links = await db.select().from(taskRepoLinks);
+      return links;
+    }),
+
+    // Manually link a repo to a task (upsert — replaces any existing link)
+    linkRepo: publicProcedure
+      .input(
+        z.object({
+          taskId: z.string().min(1),
+          repoName: z.string().min(1),
+          repoFullName: z.string().min(1),
+          repoUrl: z.string().url(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        // Upsert: if a link for this taskId already exists, replace it
+        const existing = await db
+          .select()
+          .from(taskRepoLinks)
+          .where(eq(taskRepoLinks.taskId, input.taskId))
+          .limit(1);
+
+        if (existing.length > 0) {
+          await db
+            .update(taskRepoLinks)
+            .set({
+              repoName: input.repoName,
+              repoFullName: input.repoFullName,
+              repoUrl: input.repoUrl,
+            })
+            .where(eq(taskRepoLinks.taskId, input.taskId));
+        } else {
+          await db.insert(taskRepoLinks).values({
+            taskId: input.taskId,
+            repoName: input.repoName,
+            repoFullName: input.repoFullName,
+            repoUrl: input.repoUrl,
+          });
+        }
+
+        return { success: true, taskId: input.taskId, repoName: input.repoName };
+      }),
+
+    // Remove a manual link for a task
+    unlinkRepo: publicProcedure
+      .input(z.object({ taskId: z.string().min(1) }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        await db
+          .delete(taskRepoLinks)
+          .where(eq(taskRepoLinks.taskId, input.taskId));
+        return { success: true };
       }),
   }),
 });

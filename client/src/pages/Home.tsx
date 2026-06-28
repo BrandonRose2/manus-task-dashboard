@@ -7,6 +7,14 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -15,6 +23,11 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Sheet,
   SheetContent,
@@ -60,6 +73,9 @@ import {
   Github,
   PlusCircle,
   Loader2,
+  Check,
+  Link2,
+  Unlink,
 } from "lucide-react";
 import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -395,21 +411,32 @@ function TaskCard({
   onClick,
   githubRepos,
   onCreateRepo,
+  manualLink,
+  onLinkRepo,
 }: {
   task: Task;
   index: number;
   onClick: () => void;
-  githubRepos: Array<{ name: string; url: string }> | undefined;
+  githubRepos: Array<{ name: string; url: string; fullName?: string }> | undefined;
   onCreateRepo: (task: Task) => void;
+  manualLink?: { repoName: string; repoUrl: string } | null;
+  onLinkRepo: (task: Task) => void;
 }) {
-  // Find a matching GitHub repo by fuzzy-matching the task title to repo names
-  const matchedRepo = githubRepos?.find((repo) => {
-    const repoSlug = repo.name.toLowerCase().replace(/[-_]/g, " ");
-    const taskSlug = task.title.toLowerCase().replace(/[-_]/g, " ");
-    // Check if repo name words appear in task title or vice versa
-    const repoWords = repoSlug.split(" ").filter((w) => w.length > 3);
-    return repoWords.length > 0 && repoWords.some((w) => taskSlug.includes(w));
-  }) ?? null;
+  // Manual link takes priority; fall back to fuzzy match
+  const linkedRepo = manualLink
+    ? { name: manualLink.repoName, url: manualLink.repoUrl, isManual: true }
+    : null;
+
+  const fuzzyRepo = !linkedRepo
+    ? (githubRepos?.find((repo) => {
+        const repoSlug = repo.name.toLowerCase().replace(/[-_]/g, " ");
+        const taskSlug = task.title.toLowerCase().replace(/[-_]/g, " ");
+        const repoWords = repoSlug.split(" ").filter((w) => w.length > 3);
+        return repoWords.length > 0 && repoWords.some((w) => taskSlug.includes(w));
+      }) ?? null)
+    : null;
+
+  const matchedRepo = linkedRepo ?? fuzzyRepo;
   const status = STATUS_CONFIG[task.status] || STATUS_CONFIG.stopped;
   const subtask = isSubtask(task);
 
@@ -473,24 +500,42 @@ function TaskCard({
           {/* GitHub indicator */}
           {githubRepos !== undefined && (
             matchedRepo ? (
-              <a
-                href={matchedRepo.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                title={`GitHub: ${matchedRepo.name}`}
-                className="p-1 rounded text-emerald-400 hover:text-emerald-300 hover:bg-emerald-400/10 transition-all duration-150"
-              >
-                <Github size={13} />
-              </a>
+              <div className="flex items-center gap-0.5">
+                <a
+                  href={matchedRepo.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  title={`GitHub: ${matchedRepo.name}${(matchedRepo as { isManual?: boolean }).isManual ? " (manually linked)" : " (auto-matched)"}`}
+                  className="p-1 rounded text-orange-400 hover:text-orange-300 hover:bg-orange-400/10 transition-all duration-150"
+                >
+                  <Github size={13} />
+                </a>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onLinkRepo(task); }}
+                  title="Change linked repo"
+                  className="p-1 rounded text-muted-foreground/20 hover:text-orange-400 hover:bg-orange-400/10 transition-all duration-150"
+                >
+                  <Link2 size={11} />
+                </button>
+              </div>
             ) : (
-              <button
-                onClick={(e) => { e.stopPropagation(); onCreateRepo(task); }}
-                title="No GitHub repo — click to create one"
-                className="p-1 rounded text-muted-foreground/30 hover:text-amber-400 hover:bg-amber-400/10 transition-all duration-150"
-              >
-                <PlusCircle size={13} />
-              </button>
+              <div className="flex items-center gap-0.5">
+                <button
+                  onClick={(e) => { e.stopPropagation(); onLinkRepo(task); }}
+                  title="Link a GitHub repo to this task"
+                  className="p-1 rounded text-muted-foreground/30 hover:text-amber-400 hover:bg-amber-400/10 transition-all duration-150"
+                >
+                  <Link2 size={13} />
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onCreateRepo(task); }}
+                  title="Create a new GitHub repo for this task"
+                  className="p-1 rounded text-muted-foreground/20 hover:text-amber-400 hover:bg-amber-400/10 transition-all duration-150"
+                >
+                  <PlusCircle size={13} />
+                </button>
+              </div>
             )
           )}
           <button
@@ -565,6 +610,55 @@ export default function Home() {
   const [newRepoPrivate, setNewRepoPrivate] = useState(false);
   const [createRepoError, setCreateRepoError] = useState<string | null>(null);
   const [createRepoSuccess, setCreateRepoSuccess] = useState<string | null>(null);
+
+  // Manual repo linking state
+  const { data: repoLinks, refetch: refetchLinks } = trpc.github.getLinks.useQuery(undefined, {
+    staleTime: 30 * 1000,
+  });
+  const [linkRepoOpen, setLinkRepoOpen] = useState(false);
+  const [linkRepoTask, setLinkRepoTask] = useState<Task | null>(null);
+  const [linkRepoSearch, setLinkRepoSearch] = useState("");
+  const [linkRepoPickerOpen, setLinkRepoPickerOpen] = useState(false);
+
+  const linkRepoMutation = trpc.github.linkRepo.useMutation({
+    onSuccess: () => {
+      refetchLinks();
+      setLinkRepoOpen(false);
+      setLinkRepoTask(null);
+      setLinkRepoSearch("");
+    },
+  });
+
+  const unlinkRepoMutation = trpc.github.unlinkRepo.useMutation({
+    onSuccess: () => {
+      refetchLinks();
+    },
+  });
+
+  function openLinkRepo(task: Task) {
+    setLinkRepoTask(task);
+    setLinkRepoSearch("");
+    setLinkRepoPickerOpen(false);
+    setLinkRepoOpen(true);
+  }
+
+  function closeLinkRepo() {
+    setLinkRepoOpen(false);
+    setLinkRepoTask(null);
+    setLinkRepoSearch("");
+    setLinkRepoPickerOpen(false);
+  }
+
+  // Build a lookup map: taskId -> manual link
+  const manualLinksMap = useMemo(() => {
+    const map: Record<string, { repoName: string; repoUrl: string; repoFullName: string }> = {};
+    if (repoLinks) {
+      for (const link of repoLinks) {
+        map[link.taskId] = { repoName: link.repoName, repoUrl: link.repoUrl, repoFullName: link.repoFullName };
+      }
+    }
+    return map;
+  }, [repoLinks]);
 
   const createRepoMutation = trpc.github.createRepo.useMutation({
     onSuccess: (data) => {
@@ -1253,6 +1347,8 @@ export default function Home() {
                       onClick={() => openDetail(task)}
                       githubRepos={githubRepos}
                       onCreateRepo={openCreateRepo}
+                      manualLink={manualLinksMap[task.id] ?? null}
+                      onLinkRepo={openLinkRepo}
                     />
                   </div>
                 ))}
@@ -1386,6 +1482,131 @@ export default function Home() {
 
       {/* ── Task Detail Panel ── */}
       <TaskDetailPanel task={selectedTask} open={detailOpen} onClose={closeDetail} />
+
+      {/* ── Link GitHub Repo Modal ── */}
+      <Dialog open={linkRepoOpen} onOpenChange={(open) => { if (!open) closeLinkRepo(); }}>
+        <DialogContent className="bg-card border-border max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              <Link2 size={18} className="text-orange-400" />
+              Link GitHub Repository
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground text-sm">
+              {linkRepoTask && (
+                <span className="block mt-1 text-xs text-muted-foreground/70 line-clamp-2">
+                  Task: {linkRepoTask.title}
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {/* Current link info */}
+            {linkRepoTask && manualLinksMap[linkRepoTask.id] && (
+              <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-md bg-orange-400/10 border border-orange-400/20">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Github size={13} className="text-orange-400 shrink-0" />
+                  <span className="text-xs text-orange-300 font-mono truncate">
+                    {manualLinksMap[linkRepoTask.id].repoFullName}
+                  </span>
+                </div>
+                <button
+                  onClick={() => {
+                    if (linkRepoTask) {
+                      unlinkRepoMutation.mutate({ taskId: linkRepoTask.id });
+                      closeLinkRepo();
+                    }
+                  }}
+                  className="shrink-0 flex items-center gap-1 text-[11px] text-muted-foreground hover:text-red-400 transition-colors"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  <Unlink size={11} />
+                  Unlink
+                </button>
+              </div>
+            )}
+
+            {/* Repo search picker */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                {linkRepoTask && manualLinksMap[linkRepoTask.id] ? "Change to a different repo" : "Select a repository"}
+              </label>
+              <Popover open={linkRepoPickerOpen} onOpenChange={setLinkRepoPickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    className="w-full justify-between bg-background border-border text-sm font-normal"
+                    style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                  >
+                    {linkRepoSearch
+                      ? linkRepoSearch
+                      : <span className="text-muted-foreground">Search repos...</span>}
+                    <Github size={13} className="ml-2 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[380px] p-0 bg-card border-border" align="start">
+                  <Command className="bg-card">
+                    <CommandInput
+                      placeholder="Search repositories..."
+                      className="text-sm"
+                    />
+                    <CommandList className="max-h-60">
+                      <CommandEmpty className="text-xs text-muted-foreground py-4 text-center">
+                        No repositories found
+                      </CommandEmpty>
+                      <CommandGroup>
+                        {(githubRepos ?? []).map((repo) => (
+                          <CommandItem
+                            key={repo.name}
+                            value={repo.name}
+                            onSelect={() => {
+                              setLinkRepoSearch(repo.name);
+                              setLinkRepoPickerOpen(false);
+                              if (linkRepoTask) {
+                                linkRepoMutation.mutate({
+                                  taskId: linkRepoTask.id,
+                                  repoName: repo.name,
+                                  repoFullName: (repo as { fullName?: string }).fullName ?? `BrandonRose2/${repo.name}`,
+                                  repoUrl: repo.url,
+                                });
+                              }
+                            }}
+                            className="flex items-center gap-2 cursor-pointer"
+                          >
+                            <Github size={12} className="text-orange-400 shrink-0" />
+                            <span className="font-mono text-xs flex-1 truncate">{repo.name}</span>
+                            {linkRepoTask && manualLinksMap[linkRepoTask.id]?.repoName === repo.name && (
+                              <Check size={12} className="text-orange-400 shrink-0" />
+                            )}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {linkRepoMutation.isError && (
+              <div className="text-xs text-red-400 bg-red-400/10 border border-red-400/20 rounded px-3 py-2">
+                {linkRepoMutation.error.message}
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={closeLinkRepo}
+                className="flex-1"
+                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+              >
+                Cancel
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* ── Create GitHub Repo Modal ── */}
       <Dialog open={createRepoOpen} onOpenChange={(open) => { if (!open) closeCreateRepo(); }}>
