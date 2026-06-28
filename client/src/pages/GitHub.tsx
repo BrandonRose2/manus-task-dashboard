@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ExternalLink, Github, Search, X, FolderOpen, Menu } from "lucide-react";
+import { ExternalLink, Github, Search, X, FolderOpen, Menu, Star } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Link } from "wouter";
 
@@ -9,6 +9,7 @@ interface Repo {
   description: string;
   category: string;
   updated: string;
+  starred?: boolean;
 }
 
 const CATEGORY_COLORS: Record<string, { bg: string; text: string; border: string; dot: string }> = {
@@ -46,6 +47,7 @@ export default function GitHub() {
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showStarred, setShowStarred] = useState(false);
 
   // Load repos from JSON
   useEffect(() => {
@@ -62,6 +64,7 @@ export default function GitHub() {
 
   const filtered = useMemo(() => {
     return repos.filter((r) => {
+      if (showStarred && !r.starred) return false;
       if (activeCategory && r.category !== activeCategory) return false;
       if (search) {
         const q = search.toLowerCase();
@@ -73,7 +76,9 @@ export default function GitHub() {
       }
       return true;
     });
-  }, [repos, search, activeCategory]);
+  }, [repos, search, activeCategory, showStarred]);
+
+  const starredCount = useMemo(() => repos.filter(r => r.starred).length, [repos]);
 
   const grouped = useMemo(() => {
     const map: Record<string, Repo[]> = {};
@@ -234,6 +239,25 @@ export default function GitHub() {
               </button>
             )}
           </div>
+
+          {/* Starred Toggle */}
+          <button
+            onClick={() => setShowStarred(!showStarred)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold border transition-all shrink-0 ${
+              showStarred
+                ? "bg-amber-400/15 text-amber-400 border-amber-400/40"
+                : "bg-transparent text-muted-foreground border-border hover:text-amber-400 hover:border-amber-400/30"
+            }`}
+            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+          >
+            <Star size={12} className={showStarred ? "fill-amber-400" : ""} />
+            <span className="hidden sm:inline">Starred</span>
+            <span
+              className={`text-[10px] font-mono px-1 rounded ${showStarred ? "bg-amber-400/20 text-amber-400" : "bg-muted text-muted-foreground"}`}
+            >
+              {starredCount}
+            </span>
+          </button>
 
           {/* Count */}
           <div
