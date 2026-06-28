@@ -5,6 +5,15 @@
  */
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Sheet,
@@ -49,6 +58,8 @@ import {
   SlidersHorizontal,
   RefreshCw,
   Github,
+  PlusCircle,
+  Loader2,
 } from "lucide-react";
 import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -382,11 +393,23 @@ function TaskCard({
   task,
   index,
   onClick,
+  githubRepos,
+  onCreateRepo,
 }: {
   task: Task;
   index: number;
   onClick: () => void;
+  githubRepos: Array<{ name: string; url: string }> | undefined;
+  onCreateRepo: (task: Task) => void;
 }) {
+  // Find a matching GitHub repo by fuzzy-matching the task title to repo names
+  const matchedRepo = githubRepos?.find((repo) => {
+    const repoSlug = repo.name.toLowerCase().replace(/[-_]/g, " ");
+    const taskSlug = task.title.toLowerCase().replace(/[-_]/g, " ");
+    // Check if repo name words appear in task title or vice versa
+    const repoWords = repoSlug.split(" ").filter((w) => w.length > 3);
+    return repoWords.length > 0 && repoWords.some((w) => taskSlug.includes(w));
+  }) ?? null;
   const status = STATUS_CONFIG[task.status] || STATUS_CONFIG.stopped;
   const subtask = isSubtask(task);
 
@@ -447,6 +470,29 @@ function TaskCard({
           </h3>
         </div>
         <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
+          {/* GitHub indicator */}
+          {githubRepos !== undefined && (
+            matchedRepo ? (
+              <a
+                href={matchedRepo.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                title={`GitHub: ${matchedRepo.name}`}
+                className="p-1 rounded text-emerald-400 hover:text-emerald-300 hover:bg-emerald-400/10 transition-all duration-150"
+              >
+                <Github size={13} />
+              </a>
+            ) : (
+              <button
+                onClick={(e) => { e.stopPropagation(); onCreateRepo(task); }}
+                title="No GitHub repo — click to create one"
+                className="p-1 rounded text-muted-foreground/30 hover:text-amber-400 hover:bg-amber-400/10 transition-all duration-150"
+              >
+                <PlusCircle size={13} />
+              </button>
+            )
+          )}
           <button
             onClick={(e) => { e.stopPropagation(); downloadTaskJson(task); }}
             title="Download task as JSON"
@@ -508,6 +554,54 @@ export default function Home() {
   // Detail panel state
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+
+  // GitHub repo indicator state
+  const { data: githubRepos } = trpc.github.repos.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000, // cache for 5 minutes
+  });
+  const [createRepoOpen, setCreateRepoOpen] = useState(false);
+  const [createRepoTask, setCreateRepoTask] = useState<Task | null>(null);
+  const [newRepoName, setNewRepoName] = useState("");
+  const [newRepoPrivate, setNewRepoPrivate] = useState(false);
+  const [createRepoError, setCreateRepoError] = useState<string | null>(null);
+  const [createRepoSuccess, setCreateRepoSuccess] = useState<string | null>(null);
+
+  const createRepoMutation = trpc.github.createRepo.useMutation({
+    onSuccess: (data) => {
+      setCreateRepoSuccess(data.url);
+      setCreateRepoError(null);
+      // Invalidate the repos query so the indicator updates
+      utils.github.repos.invalidate();
+    },
+    onError: (err) => {
+      setCreateRepoError(err.message);
+      setCreateRepoSuccess(null);
+    },
+  });
+
+  function openCreateRepo(task: Task) {
+    // Pre-fill a suggested repo name from the task title
+    const suggested = task.title
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, "")
+      .trim()
+      .replace(/\s+/g, "-")
+      .slice(0, 60);
+    setCreateRepoTask(task);
+    setNewRepoName(suggested);
+    setNewRepoPrivate(false);
+    setCreateRepoError(null);
+    setCreateRepoSuccess(null);
+    setCreateRepoOpen(true);
+  }
+
+  function closeCreateRepo() {
+    setCreateRepoOpen(false);
+    setCreateRepoTask(null);
+    setNewRepoName("");
+    setCreateRepoError(null);
+    setCreateRepoSuccess(null);
+  }
 
   function openDetail(task: Task) {
     setSelectedTask(task);
@@ -1153,7 +1247,13 @@ export default function Home() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                 {paginated.map((task, i) => (
                   <div key={task.num} className="fade-slide-in">
-                    <TaskCard task={task} index={i} onClick={() => openDetail(task)} />
+                    <TaskCard
+                      task={task}
+                      index={i}
+                      onClick={() => openDetail(task)}
+                      githubRepos={githubRepos}
+                      onCreateRepo={openCreateRepo}
+                    />
                   </div>
                 ))}
               </div>
@@ -1286,6 +1386,129 @@ export default function Home() {
 
       {/* ── Task Detail Panel ── */}
       <TaskDetailPanel task={selectedTask} open={detailOpen} onClose={closeDetail} />
+
+      {/* ── Create GitHub Repo Modal ── */}
+      <Dialog open={createRepoOpen} onOpenChange={(open) => { if (!open) closeCreateRepo(); }}>
+        <DialogContent className="bg-card border-border max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              <Github size={18} className="text-amber-400" />
+              Create GitHub Repository
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground text-sm">
+              {createRepoTask && (
+                <span className="block mt-1 text-xs text-muted-foreground/70 line-clamp-2">
+                  Task: {createRepoTask.title}
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          {createRepoSuccess ? (
+            <div className="py-4 text-center space-y-3">
+              <div className="flex items-center justify-center gap-2 text-emerald-400">
+                <CheckCircle2 size={20} />
+                <span className="font-semibold" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Repository Created!</span>
+              </div>
+              <a
+                href={createRepoSuccess}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-amber-400 hover:underline break-all"
+              >
+                {createRepoSuccess}
+              </a>
+              <Button onClick={closeCreateRepo} className="w-full mt-2 bg-amber-400 text-black hover:bg-amber-300 font-semibold" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                Done
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4 py-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  Repository Name
+                </label>
+                <Input
+                  value={newRepoName}
+                  onChange={(e) => setNewRepoName(e.target.value)}
+                  placeholder="my-repo-name"
+                  className="bg-background border-border text-foreground font-mono text-sm"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && newRepoName.trim() && !createRepoMutation.isPending) {
+                      createRepoMutation.mutate({
+                        name: newRepoName.trim(),
+                        description: createRepoTask?.title ?? "",
+                        isPrivate: newRepoPrivate,
+                      });
+                    }
+                  }}
+                />
+                <p className="text-[11px] text-muted-foreground/60">
+                  Will be created at: github.com/BrandonRose2/<span className="text-amber-400/80 font-mono">{newRepoName || "repo-name"}</span>
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setNewRepoPrivate((v) => !v)}
+                  className={`w-9 h-5 rounded-full transition-colors duration-200 relative ${
+                    newRepoPrivate ? "bg-amber-400" : "bg-muted"
+                  }`}
+                >
+                  <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${
+                    newRepoPrivate ? "translate-x-4" : "translate-x-0.5"
+                  }`} />
+                </button>
+                <span className="text-xs text-muted-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  {newRepoPrivate ? "Private repository" : "Public repository"}
+                </span>
+              </div>
+
+              {createRepoError && (
+                <div className="text-xs text-red-400 bg-red-400/10 border border-red-400/20 rounded px-3 py-2">
+                  {createRepoError}
+                </div>
+              )}
+
+              <DialogFooter className="gap-2">
+                <Button
+                  variant="outline"
+                  onClick={closeCreateRepo}
+                  className="flex-1"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (!newRepoName.trim()) return;
+                    createRepoMutation.mutate({
+                      name: newRepoName.trim(),
+                      description: createRepoTask?.title ?? "",
+                      isPrivate: newRepoPrivate,
+                    });
+                  }}
+                  disabled={!newRepoName.trim() || createRepoMutation.isPending}
+                  className="flex-1 bg-amber-400 text-black hover:bg-amber-300 font-semibold"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  {createRepoMutation.isPending ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 size={14} className="animate-spin" />
+                      Creating...
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <Github size={14} />
+                      Create Repo
+                    </span>
+                  )}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

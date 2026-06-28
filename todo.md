@@ -40,3 +40,9 @@
 ## GitHub Repositories
 - [x] Fetch all GitHub repos for BrandonRose2 via GitHub API
 - [x] Add GitHub Repositories page/sidebar nav item with repo cards and links
+
+## GitHub Repo Indicator & Creator
+- [x] Backend tRPC endpoint: fetch all GitHub repos for BrandonRose2 (live, not static)
+- [x] Backend tRPC endpoint: create a new GitHub repo by name
+- [x] GitHub indicator badge on each task card (green checkmark if repo exists, grey + if not)
+- [x] Create Repo modal: click card badge → enter repo name → push to GitHub
